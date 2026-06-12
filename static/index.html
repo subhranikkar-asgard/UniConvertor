@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UniConvert – Free Universal File Converter & Compressor</title>
+  <meta name="description" content="Convert and compress files instantly for free. Supports images (PNG, JPG, WebP, GIF, TIFF, ICO, BMP), PDFs, and Word documents — no signup needed." />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50:'#f0f4ff',100:'#e0eaff',400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca',900:'#1e1b4b' },
+            surface: { 900:'#080c18',800:'#0d1225',700:'#131a35',600:'#1a2340' }
+          },
+          fontFamily: { sans:['Inter','system-ui','sans-serif'] },
+          animation: {
+            'float':      'float 6s ease-in-out infinite',
+            'pulse-slow': 'pulse 4s cubic-bezier(0.4,0,0.6,1) infinite',
+            'slide-up':   'slideUp 0.45s cubic-bezier(0.16,1,0.3,1) forwards',
+            'shimmer':    'shimmer 2s linear infinite',
+          },
+          keyframes: {
+            float:   { '0%,100%':{ transform:'translateY(0)' }, '50%':{ transform:'translateY(-12px)' } },
+            slideUp: { from:{ opacity:'0', transform:'translateY(18px)' }, to:{ opacity:'1', transform:'translateY(0)' } },
+            shimmer: { '0%':{ backgroundPosition:'-200% 0' }, '100%':{ backgroundPosition:'200% 0' } },
+          }
+        }
+      }
+    }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <style>
+    body { background-color:#080c18; }
+
+    .hero-bg {
+      background-image: url('/static/assets/hero_bg.png');
+      background-size: cover; background-position: center;
+    }
+
+    /* Glassmorphism */
+    .glass {
+      background: rgba(13,18,37,0.65);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(99,102,241,0.18);
+    }
+
+    /* Glow orbs */
+    .orb { position:absolute; border-radius:50%; filter:blur(80px); opacity:.25; pointer-events:none; }
+    .orb-purple { background:#7c3aed; width:340px; height:340px; top:-80px; right:-80px; }
+    .orb-cyan   { background:#06b6d4; width:260px; height:260px; bottom:-60px; left:-60px; }
+
+    /* Drag zone */
+    #drop-zone.drag-over {
+      border-color: #6366f1;
+      background: rgba(99,102,241,0.08);
+      transform: scale(1.01);
+    }
+
+    /* Progress shimmer */
+    .progress-bar {
+      background: linear-gradient(90deg, #4f46e5 0%, #06b6d4 50%, #4f46e5 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s linear infinite;
+    }
+
+    /* Compress level button states */
+    .level-btn {
+      flex:1; padding:10px 8px; border-radius:12px;
+      border:2px solid rgba(255,255,255,0.08);
+      background: rgba(19,26,53,0.7);
+      color:#94a3b8; font-size:0.78rem; font-weight:600;
+      cursor:pointer; transition: all 0.2s ease;
+      text-align:center; position:relative; overflow:hidden;
+    }
+    .level-btn:hover { border-color:rgba(99,102,241,0.5); color:#c7d2fe; background:rgba(99,102,241,0.1); }
+
+    .level-btn.selected-max {
+      border-color:#f97316; background:rgba(249,115,22,0.15);
+      color:#fb923c; box-shadow:0 0 14px rgba(249,115,22,0.3);
+    }
+    .level-btn.selected-rec {
+      border-color:#6366f1; background:rgba(99,102,241,0.2);
+      color:#a5b4fc; box-shadow:0 0 14px rgba(99,102,241,0.4);
+    }
+    .level-btn.selected-min {
+      border-color:#22c55e; background:rgba(34,197,94,0.15);
+      color:#4ade80; box-shadow:0 0 14px rgba(34,197,94,0.3);
+    }
+    .level-badge {
+      display:inline-block; font-size:.6rem; font-weight:700; padding:2px 6px;
+      border-radius:4px; margin-bottom:4px; letter-spacing:.05em;
+    }
+    .badge-max { background:rgba(249,115,22,0.25); color:#fb923c; }
+    .badge-rec { background:rgba(99,102,241,0.25); color:#818cf8; }
+    .badge-min { background:rgba(34,197,94,0.2);   color:#4ade80; }
+
+    /* Action group headers */
+    .group-header {
+      padding:6px 12px; font-size:.65rem; font-weight:700;
+      letter-spacing:.1em; text-transform:uppercase;
+      color:#475569; pointer-events:none;
+    }
+
+    /* Format tag pills */
+    .fmt-tag {
+      display:inline-flex; align-items:center; gap:5px;
+      padding:5px 12px; border-radius:999px; font-size:.75rem; font-weight:600;
+      cursor:pointer; border:1px solid transparent; transition:all .2s;
+      white-space:nowrap;
+    }
+    .fmt-tag-compress { background:rgba(34,197,94,.12); color:#4ade80; border-color:rgba(34,197,94,.3); }
+    .fmt-tag-compress:hover { background:rgba(34,197,94,.22); }
+    .fmt-tag-convert  { background:rgba(99,102,241,.12); color:#a5b4fc; border-color:rgba(99,102,241,.3); }
+    .fmt-tag-convert:hover  { background:rgba(99,102,241,.22); }
+    .fmt-tag.tag-active { transform:scale(1.05); outline:2px solid currentColor; outline-offset:2px; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width:6px; }
+    ::-webkit-scrollbar-track { background:#0d1225; }
+    ::-webkit-scrollbar-thumb { background:#4f46e5; border-radius:3px; }
+
+    select option { background:#131a35; color:#e2e8f0; }
+    .stat-card:hover { border-color:rgba(99,102,241,.5); transform:translateY(-2px); }
+    .feature-icon { box-shadow:0 0 20px rgba(99,102,241,.3); }
+    .hidden { display:none !important; }
+
+    /* Conversion matrix table */
+    .matrix-table td, .matrix-table th {
+      padding:8px 12px; border-bottom:1px solid rgba(255,255,255,.05);
+      font-size:.78rem;
+    }
+    .matrix-table th { color:#64748b; font-weight:600; text-align:left; }
+    .matrix-table td { color:#cbd5e1; }
+    .chip {
+      display:inline-block; padding:2px 8px; border-radius:4px;
+      font-size:.65rem; font-weight:600; margin:1px;
+    }
+  </style>
+</head>
+
+<body class="font-sans text-slate-200 min-h-screen overflow-x-hidden">
+
+  <!-- ═══════════════ NAVBAR ═══════════════ -->
+  <nav class="fixed top-0 left-0 right-0 z-50 glass border-b border-white/5">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center feature-icon">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+            </svg>
+          </div>
+          <span class="text-lg font-bold text-white">Uni<span class="text-brand-400">Convert</span></span>
+        </div>
+        <div class="hidden md:flex items-center gap-6 text-sm text-slate-400">
+          <a href="#converter" class="hover:text-white transition-colors">Converter</a>
+          <a href="#features"  class="hover:text-white transition-colors">Features</a>
+          <a href="#supported" class="hover:text-white transition-colors">Formats</a>
+        </div>
+        <a href="#converter" class="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium transition-all hover:shadow-lg hover:shadow-brand-500/30">
+          Start Converting
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══════════════ HERO ═══════════════ -->
+  <section class="hero-bg relative min-h-screen flex items-center justify-center pt-16 overflow-hidden">
+    <div class="absolute inset-0 bg-surface-900/70"></div>
+    <div class="orb orb-purple animate-float"></div>
+    <div class="orb orb-cyan animate-float" style="animation-delay:3s"></div>
+
+    <div class="relative z-10 text-center max-w-4xl mx-auto px-4 py-20">
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass text-xs font-medium text-brand-400 border border-brand-500/30 mb-6">
+        <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse-slow"></span>
+        Free · No Sign-up · Privacy First · 100 MB limit
+      </div>
+
+      <h1 class="text-5xl sm:text-6xl lg:text-7xl font-black text-white leading-tight mb-6">
+        Convert & Compress<br/>
+        <span class="bg-gradient-to-r from-brand-400 via-cyan-400 to-purple-400 bg-clip-text text-transparent">
+          Any File, Instantly
+        </span>
+      </h1>
+      <p class="text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto mb-10">
+        Transform images (PNG, JPG, WebP, GIF, TIFF, ICO, BMP), PDFs, and Word documents — with full control over compression level. No watermarks, no sign-up.
+      </p>
+
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="#converter" class="px-8 py-4 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-semibold text-lg transition-all hover:shadow-2xl hover:shadow-brand-500/40 hover:-translate-y-0.5">
+          🚀 Start Converting
+        </a>
+        <a href="#supported" class="px-8 py-4 rounded-xl glass border border-white/10 text-white font-semibold text-lg hover:border-brand-500/50 transition-all">
+          View All Formats
+        </a>
+      </div>
+
+      <div class="mt-16 grid grid-cols-3 gap-4 max-w-lg mx-auto">
+        <div class="stat-card glass rounded-xl p-4 border border-white/5 transition-all duration-300 cursor-default">
+          <div class="text-2xl font-black text-white">100MB</div>
+          <div class="text-xs text-slate-400 mt-1">Max File Size</div>
+        </div>
+        <div class="stat-card glass rounded-xl p-4 border border-white/5 transition-all duration-300 cursor-default">
+          <div class="text-2xl font-black text-white">20+</div>
+          <div class="text-xs text-slate-400 mt-1">Conversions</div>
+        </div>
+        <div class="stat-card glass rounded-xl p-4 border border-white/5 transition-all duration-300 cursor-default">
+          <div class="text-2xl font-black text-white">100%</div>
+          <div class="text-xs text-slate-400 mt-1">Free Forever</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-slate-500 animate-bounce">
+      <span class="text-xs">Scroll down</span>
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ═══════════════ CONVERTER ═══════════════ -->
+  <section id="converter" class="relative py-24 px-4">
+    <div class="max-w-3xl mx-auto">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl sm:text-4xl font-bold text-white mb-3">File Converter & Compressor</h2>
+        <p class="text-slate-400">Upload any file, pick your action and compression level, done.</p>
+      </div>
+
+      <div class="glass rounded-3xl p-8 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+        <!-- ── STEP 1: Upload ── -->
+        <div class="mb-6">
+          <label class="block text-sm font-semibold text-slate-300 mb-3">
+            <span class="inline-flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-brand-500 text-white text-xs flex items-center justify-center font-bold">1</span>
+              Upload Your File
+            </span>
+          </label>
+
+          <div id="drop-zone"
+               class="relative border-2 border-dashed border-slate-600 rounded-2xl p-10 text-center cursor-pointer transition-all duration-300 hover:border-brand-500/60 hover:bg-brand-500/5 group">
+            <input type="file" id="file-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+
+            <div id="upload-placeholder">
+              <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-surface-700 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 feature-icon">
+                <svg class="w-8 h-8 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+              </div>
+              <p class="text-slate-300 font-medium mb-1">Drag & drop your file here</p>
+              <p class="text-slate-500 text-sm">or click to browse</p>
+              <p class="text-slate-600 text-xs mt-3">
+                Images · PDF · DOCX &nbsp;|&nbsp; Max 100 MB
+              </p>
+            </div>
+
+            <div id="file-preview" class="hidden">
+              <div class="flex items-center justify-center gap-4">
+                <div id="file-icon" class="w-14 h-14 rounded-xl bg-surface-700 flex items-center justify-center text-3xl"></div>
+                <div class="text-left">
+                  <p id="file-name" class="text-white font-semibold truncate max-w-xs"></p>
+                  <p id="file-size" class="text-slate-400 text-sm"></p>
+                  <button id="remove-file" class="text-xs text-red-400 hover:text-red-300 mt-1 transition-colors">✕ Remove file</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── STEP 2: Action ── -->
+        <div id="action-section" class="hidden mb-5 animate-slide-up">
+          <label class="block text-sm font-semibold text-slate-300 mb-3">
+            <span class="inline-flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-brand-500 text-white text-xs flex items-center justify-center font-bold">2</span>
+              Choose Action
+            </span>
+          </label>
+
+          <!-- Format tag pills — grouped -->
+          <div class="mb-3">
+            <p class="text-xs font-semibold text-green-500/70 uppercase tracking-widest mb-1.5">Compress</p>
+            <div id="tags-compress" class="flex flex-wrap gap-2 mb-3"></div>
+            <p class="text-xs font-semibold text-brand-400/70 uppercase tracking-widest mb-1.5">Convert To</p>
+            <div id="tags-convert" class="flex flex-wrap gap-2"></div>
+          </div>
+
+          <!-- Fallback dropdown (also updates on pill click) -->
+          <div class="relative mt-3">
+            <select id="action-select"
+                    class="w-full px-4 py-3 pr-10 rounded-xl bg-surface-700 border border-slate-600 text-slate-200 text-sm focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 appearance-none cursor-pointer">
+              <option value="">— or select from dropdown —</option>
+            </select>
+            <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+              <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── STEP 3: Compression Level (shown only for compress actions) ── -->
+        <div id="compress-level-section" class="hidden mb-5 animate-slide-up">
+          <label class="block text-sm font-semibold text-slate-300 mb-3">
+            <span class="inline-flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-orange-500 text-white text-xs flex items-center justify-center font-bold">3</span>
+              Compression Level
+            </span>
+          </label>
+
+          <div class="flex gap-3" id="level-buttons">
+            <!-- Maximum -->
+            <button class="level-btn" data-level="maximum" id="btn-maximum" onclick="selectLevel('maximum')">
+              <span class="level-badge badge-max">MAX</span><br/>
+              Maximum<br/>
+              <span class="text-xs font-normal opacity-70">Smallest file</span>
+            </button>
+            <!-- Recommended -->
+            <button class="level-btn selected-rec" data-level="recommended" id="btn-recommended" onclick="selectLevel('recommended')">
+              <span class="level-badge badge-rec">⭐ BEST</span><br/>
+              Recommended<br/>
+              <span class="text-xs font-normal opacity-70">Size ↔ quality</span>
+            </button>
+            <!-- Minimum -->
+            <button class="level-btn" data-level="minimum" id="btn-minimum" onclick="selectLevel('minimum')">
+              <span class="level-badge badge-min">HQ</span><br/>
+              Minimum<br/>
+              <span class="text-xs font-normal opacity-70">Best quality</span>
+            </button>
+          </div>
+
+          <!-- Level info bar -->
+          <div id="level-info" class="mt-3 px-4 py-2.5 rounded-xl bg-surface-700 border border-white/5 text-xs text-slate-400"></div>
+        </div>
+
+        <!-- ── STEP 4 (or 3 for convert): Process button ── -->
+        <div id="convert-section" class="hidden animate-slide-up">
+          <label class="block text-sm font-semibold text-slate-300 mb-3">
+            <span class="inline-flex items-center gap-2">
+              <span id="step-num" class="w-6 h-6 rounded-full bg-brand-500 text-white text-xs flex items-center justify-center font-bold">3</span>
+              Process & Download
+            </span>
+          </label>
+
+          <button id="convert-btn"
+                  class="w-full py-4 rounded-xl bg-gradient-to-r from-brand-600 to-cyan-600 hover:from-brand-500 hover:to-cyan-500 text-white font-bold text-lg transition-all duration-300 hover:shadow-2xl hover:shadow-brand-500/30 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
+            <span id="btn-text" class="flex items-center justify-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+              Convert Now
+            </span>
+          </button>
+        </div>
+
+        <!-- Progress -->
+        <div id="progress-section" class="hidden mt-6">
+          <div class="flex justify-between text-xs text-slate-400 mb-2">
+            <span id="progress-label">Processing…</span>
+            <span id="progress-pct">0%</span>
+          </div>
+          <div class="w-full h-2 bg-surface-700 rounded-full overflow-hidden">
+            <div id="progress-bar" class="progress-bar h-full rounded-full transition-all duration-300" style="width:0%"></div>
+          </div>
+        </div>
+
+        <!-- Result -->
+        <div id="result-panel" class="hidden mt-6 p-5 rounded-2xl border animate-slide-up"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ FEATURES ═══════════════ -->
+  <section id="features" class="py-20 px-4 bg-surface-800/30">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center mb-14">
+        <h2 class="text-3xl sm:text-4xl font-bold text-white mb-3">Why UniConvert?</h2>
+        <p class="text-slate-400 max-w-xl mx-auto">Built for speed, privacy, and simplicity.</p>
+      </div>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="glass rounded-2xl p-6 border border-white/5 hover:border-brand-500/30 transition-all duration-300 hover:-translate-y-1 group">
+          <div class="w-12 h-12 rounded-xl bg-brand-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform feature-icon">
+            <svg class="w-6 h-6 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          </div>
+          <h3 class="text-white font-semibold mb-2">Privacy First</h3>
+          <p class="text-slate-400 text-sm">Files auto-deleted after 2 minutes. Nothing is stored permanently.</p>
+        </div>
+        <div class="glass rounded-2xl p-6 border border-white/5 hover:border-orange-500/30 transition-all duration-300 hover:-translate-y-1 group">
+          <div class="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+          </div>
+          <h3 class="text-white font-semibold mb-2">3 Compression Levels</h3>
+          <p class="text-slate-400 text-sm">Maximum, Recommended, or Minimum — you control the quality/size trade-off.</p>
+        </div>
+        <div class="glass rounded-2xl p-6 border border-white/5 hover:border-cyan-500/30 transition-all duration-300 hover:-translate-y-1 group">
+          <div class="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+          <h3 class="text-white font-semibold mb-2">Lightning Fast</h3>
+          <p class="text-slate-400 text-sm">Server-side processing — even large multi-page PDFs are handled in seconds.</p>
+        </div>
+        <div class="glass rounded-2xl p-6 border border-white/5 hover:border-green-500/30 transition-all duration-300 hover:-translate-y-1 group">
+          <div class="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          </div>
+          <h3 class="text-white font-semibold mb-2">20+ Conversions</h3>
+          <p class="text-slate-400 text-sm">Images ↔ any format, PDF → Word/Images, Word → PDF, and more.</p>
+        </div>
+        <div class="glass rounded-2xl p-6 border border-white/5 hover:border-purple-500/30 transition-all duration-300 hover:-translate-y-1 group">
+          <div class="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <h3 class="text-white font-semibold mb-2">No Sign-up Ever</h3>
+          <p class="text-slate-400 text-sm">No accounts, no email, no subscriptions. Just drag, drop, done.</p>
+        </div>
+        <div class="glass rounded-2xl p-6 border border-white/5 hover:border-pink-500/30 transition-all duration-300 hover:-translate-y-1 group">
+          <div class="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/></svg>
+          </div>
+          <h3 class="text-white font-semibold mb-2">100% Free</h3>
+          <p class="text-slate-400 text-sm">All features, all formats, forever free. No hidden paywalls.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ SUPPORTED FORMATS ═══════════════ -->
+  <section id="supported" class="py-20 px-4">
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-14">
+        <h2 class="text-3xl sm:text-4xl font-bold text-white mb-3">Complete Format Matrix</h2>
+        <p class="text-slate-400">Every supported input → output combination.</p>
+      </div>
+
+      <div class="glass rounded-2xl overflow-hidden border border-white/5">
+        <table class="matrix-table w-full">
+          <thead>
+            <tr class="bg-surface-700/60">
+              <th class="w-1/5">Input</th>
+              <th>Compress</th>
+              <th>Convert To</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="font-semibold text-cyan-300">🖼️ Images<br/><span class="text-slate-500 font-normal">PNG·JPG·WebP·GIF·BMP·TIFF·ICO</span></td>
+              <td>
+                <span class="chip bg-orange-500/20 text-orange-300">Max</span>
+                <span class="chip bg-brand-500/20 text-brand-300">Recommended</span>
+                <span class="chip bg-green-500/20 text-green-300">Min</span>
+              </td>
+              <td>
+                <span class="chip bg-slate-700 text-slate-300">PNG</span>
+                <span class="chip bg-slate-700 text-slate-300">JPG</span>
+                <span class="chip bg-slate-700 text-slate-300">WebP</span>
+                <span class="chip bg-slate-700 text-slate-300">BMP</span>
+                <span class="chip bg-slate-700 text-slate-300">GIF</span>
+                <span class="chip bg-slate-700 text-slate-300">TIFF</span>
+                <span class="chip bg-slate-700 text-slate-300">ICO</span>
+                <span class="chip bg-slate-700 text-slate-300">PDF</span>
+              </td>
+            </tr>
+            <tr>
+              <td class="font-semibold text-red-300">📄 PDF</td>
+              <td>
+                <span class="chip bg-orange-500/20 text-orange-300">Max</span>
+                <span class="chip bg-brand-500/20 text-brand-300">Recommended</span>
+                <span class="chip bg-green-500/20 text-green-300">Min</span>
+              </td>
+              <td>
+                <span class="chip bg-slate-700 text-slate-300">DOCX</span>
+                <span class="chip bg-slate-700 text-slate-300">PNG</span>
+                <span class="chip bg-slate-700 text-slate-300">JPG</span>
+                <span class="chip bg-slate-700 text-slate-300">TIFF</span>
+                <span class="text-slate-500 text-xs ml-1">(multi-page → ZIP)</span>
+              </td>
+            </tr>
+            <tr class="border-b-0">
+              <td class="font-semibold text-brand-300">📝 Word<br/><span class="text-slate-500 font-normal">DOCX · DOC</span></td>
+              <td>
+                <span class="chip bg-green-500/20 text-green-300">Re-pack</span>
+              </td>
+              <td>
+                <span class="chip bg-slate-700 text-slate-300">PDF</span>
+                <span class="chip bg-slate-700 text-slate-300">PNG</span>
+                <span class="chip bg-slate-700 text-slate-300">JPG</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="text-center text-slate-500 text-sm mt-6">
+        Multi-page PDFs and Word docs exported as images are returned as a <strong class="text-slate-400">.zip</strong> archive.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═══════════════ FOOTER ═══════════════ -->
+  <footer class="border-t border-white/5 py-10 px-4 bg-surface-900">
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-7 h-7 rounded-lg bg-brand-500 flex items-center justify-center">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+          </svg>
+        </div>
+        <span class="text-sm font-semibold text-white">Uni<span class="text-brand-400">Convert</span></span>
+      </div>
+      <p class="text-slate-500 text-sm">© 2025 UniConvert · Free forever · Files auto-deleted after 2 min</p>
+      <div class="flex gap-6 text-sm text-slate-500">
+        <span>Privacy First</span><span>·</span><span>No Tracking</span><span>·</span><span>Open Source Ready</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ═══════════════ JAVASCRIPT ═══════════════ -->
+  <script>
+    /* ── Utility ─────────────────────────────────────────────────────── */
+    const $ = id => document.getElementById(id);
+
+    const FILE_ICONS = {
+      pdf:'📄', doc:'📝', docx:'📝',
+      png:'🖼️', jpg:'🖼️', jpeg:'🖼️', gif:'🎞️',
+      webp:'🖼️', bmp:'🖼️', tiff:'🖼️', tif:'🖼️', ico:'🎯',
+      zip:'🗜️', default:'📦'
+    };
+
+    function formatBytes(b) {
+      if (b < 1024) return b + ' B';
+      if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB';
+      return (b/1024/1024).toFixed(2) + ' MB';
+    }
+
+    /* ── State ───────────────────────────────────────────────────────── */
+    let currentFile     = null;
+    let selectedAction  = null;   // { value, type }
+    let selectedLevel   = 'recommended';
+    let compressLevelDefs = [];
+
+    const LEVEL_ICON = { maximum:'🔴', recommended:'⭐', minimum:'🟢' };
+
+    /* ── DOM refs ────────────────────────────────────────────────────── */
+    const dropZone           = $('drop-zone');
+    const fileInput          = $('file-input');
+    const uploadPH           = $('upload-placeholder');
+    const filePreview        = $('file-preview');
+    const fileNameEl         = $('file-name');
+    const fileSizeEl         = $('file-size');
+    const fileIconEl         = $('file-icon');
+    const removeFileBtn      = $('remove-file');
+    const actionSection      = $('action-section');
+    const actionSelect       = $('action-select');
+    const tagsCompress       = $('tags-compress');
+    const tagsConvert        = $('tags-convert');
+    const compressLevelSec   = $('compress-level-section');
+    const convertSection     = $('convert-section');
+    const convertBtn         = $('convert-btn');
+    const btnText            = $('btn-text');
+    const progressSec        = $('progress-section');
+    const progressBar        = $('progress-bar');
+    const progressLabel      = $('progress-label');
+    const progressPct        = $('progress-pct');
+    const resultPanel        = $('result-panel');
+    const levelInfo          = $('level-info');
+    const stepNum            = $('step-num');
+
+    /* ── Drag & Drop ─────────────────────────────────────────────────── */
+    ['dragenter','dragover'].forEach(e =>
+      dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.add('drag-over'); })
+    );
+    ['dragleave','drop'].forEach(e =>
+      dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.remove('drag-over'); })
+    );
+    dropZone.addEventListener('drop', e => {
+      const f = e.dataTransfer.files[0]; if (f) handleFileSelected(f);
+    });
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) handleFileSelected(fileInput.files[0]);
+    });
+
+    /* ── File selected ───────────────────────────────────────────────── */
+    async function handleFileSelected(file) {
+      if (file.size > 100 * 1024 * 1024) {
+        showResult('error', '⚠️ File too large. Maximum allowed size is 100 MB.');
+        return;
+      }
+
+      currentFile    = file;
+      selectedAction = null;
+      const ext      = file.name.split('.').pop().toLowerCase();
+      const icon     = FILE_ICONS[ext] || FILE_ICONS.default;
+
+      fileIconEl.textContent   = icon;
+      fileNameEl.textContent   = file.name;
+      fileSizeEl.textContent   = formatBytes(file.size);
+      uploadPH.classList.add('hidden');
+      filePreview.classList.remove('hidden');
+
+      resultPanel.classList.add('hidden');
+      progressSec.classList.add('hidden');
+      compressLevelSec.classList.add('hidden');
+      convertSection.classList.add('hidden');
+
+      try {
+        const res  = await fetch('/api/upload-info', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: file.name })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          showResult('error', `❌ ${data.error}`);
+          resetFileState();
+          return;
+        }
+
+        compressLevelDefs = data.compress_levels || [];
+        populateActions(data.actions);
+        actionSection.classList.remove('hidden');
+      } catch(err) {
+        showResult('error', '❌ Failed to connect to server.');
+        resetFileState();
+      }
+    }
+
+    /* ── Populate actions ────────────────────────────────────────────── */
+    function populateActions(actions) {
+      tagsCompress.innerHTML = '';
+      tagsConvert.innerHTML  = '';
+
+      // Rebuild dropdown with optgroups
+      actionSelect.innerHTML = '<option value="">— or select from dropdown —</option>';
+      const grpC = document.createElement('optgroup'); grpC.label = '🗜️ Compress';
+      const grpV = document.createElement('optgroup'); grpV.label = '↔ Convert';
+
+      actions.forEach(a => {
+        // Pill
+        const tag = document.createElement('span');
+        tag.className = `fmt-tag ${a.type === 'compress' ? 'fmt-tag-compress' : 'fmt-tag-convert'}`;
+        tag.dataset.value = a.value;
+        tag.dataset.type  = a.type;
+        tag.innerHTML = a.type === 'compress'
+          ? `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7"/></svg> ${a.label}`
+          : `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg> ${a.label}`;
+        tag.addEventListener('click', () => pickAction(a, tag));
+        (a.type === 'compress' ? tagsCompress : tagsConvert).appendChild(tag);
+
+        // Dropdown option
+        const opt  = document.createElement('option');
+        opt.value  = a.value;
+        opt.textContent = a.label;
+        (a.type === 'compress' ? grpC : grpV).appendChild(opt);
+      });
+
+      if (grpC.children.length) actionSelect.appendChild(grpC);
+      if (grpV.children.length) actionSelect.appendChild(grpV);
+    }
+
+    function pickAction(action, tagEl) {
+      selectedAction = action;
+
+      // Highlight the selected tag, reset others
+      document.querySelectorAll('.fmt-tag').forEach(t => t.classList.remove('tag-active'));
+      if (tagEl) tagEl.classList.add('tag-active');
+      if (actionSelect.value !== action.value) actionSelect.value = action.value;
+
+      const isCompress = action.type === 'compress';
+
+      // Show/hide compression level
+      if (isCompress) {
+        compressLevelSec.classList.remove('hidden');
+        updateLevelInfo();
+        stepNum.textContent = '4';
+      } else {
+        compressLevelSec.classList.add('hidden');
+        stepNum.textContent = '3';
+      }
+
+      // Update button label
+      btnText.innerHTML = isCompress
+        ? `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7"/></svg> Compress Now`
+        : `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> Convert Now`;
+
+      convertSection.classList.remove('hidden');
+    }
+
+    actionSelect.addEventListener('change', () => {
+      const val = actionSelect.value;
+      if (!val) return;
+      const tag = document.querySelector(`.fmt-tag[data-value="${val}"]`);
+      const type = tag ? tag.dataset.type : (val.startsWith('compress') ? 'compress' : 'convert');
+      pickAction({ value: val, type }, tag);
+    });
+
+    /* ── Compression level ───────────────────────────────────────────── */
+    function selectLevel(level) {
+      selectedLevel = level;
+      ['maximum','recommended','minimum'].forEach(l => {
+        const btn = $(`btn-${l}`);
+        btn.className = 'level-btn';
+        if (l === level) {
+          btn.classList.add(
+            l === 'maximum'     ? 'selected-max' :
+            l === 'recommended' ? 'selected-rec' : 'selected-min'
+          );
+        }
+      });
+      updateLevelInfo();
+    }
+
+    function updateLevelInfo() {
+      const def = compressLevelDefs.find(d => d.value === selectedLevel);
+      if (!def) { levelInfo.textContent = ''; return; }
+      const icons = { maximum:'🔴', recommended:'⭐', minimum:'🟢' };
+      levelInfo.innerHTML = `${icons[selectedLevel] || ''} <strong class="text-slate-200">${def.label}</strong> — ${def.description}`;
+    }
+
+    /* ── Remove file ─────────────────────────────────────────────────── */
+    removeFileBtn.addEventListener('click', e => { e.stopPropagation(); resetFileState(); });
+
+    function resetFileState() {
+      currentFile = null; selectedAction = null;
+      fileInput.value = '';
+      uploadPH.classList.remove('hidden');
+      filePreview.classList.add('hidden');
+      actionSection.classList.add('hidden');
+      compressLevelSec.classList.add('hidden');
+      convertSection.classList.add('hidden');
+      progressSec.classList.add('hidden');
+      resultPanel.classList.add('hidden');
+      tagsCompress.innerHTML = '';
+      tagsConvert.innerHTML  = '';
+    }
+
+    /* ── Convert / Process ───────────────────────────────────────────── */
+    convertBtn.addEventListener('click', async () => {
+      if (!currentFile || !selectedAction) return;
+
+      convertBtn.disabled = true;
+      btnText.innerHTML = `
+        <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        Processing…`;
+
+      resultPanel.classList.add('hidden');
+      progressSec.classList.remove('hidden');
+      progressLabel.textContent = 'Uploading & processing…';
+      progressPct.textContent   = '0%';
+      progressBar.style.width   = '0%';
+
+      let pct = 0;
+      const timer = setInterval(() => {
+        pct = Math.min(pct + Math.random() * 10, 87);
+        progressBar.style.width = pct + '%';
+        progressPct.textContent = Math.round(pct) + '%';
+      }, 300);
+
+      const fd = new FormData();
+      fd.append('file',           currentFile);
+      fd.append('action',         selectedAction.value);
+      fd.append('compress_level', selectedLevel);
+
+      try {
+        const res  = await fetch('/api/process', { method:'POST', body:fd });
+        const data = await res.json();
+
+        clearInterval(timer);
+        progressBar.style.width = '100%';
+        progressPct.textContent = '100%';
+        progressLabel.textContent = 'Done!';
+
+        if (!res.ok) showResult('error', `❌ ${data.error}`);
+        else         showResult('success', data.download_url, data.filename);
+      } catch(err) {
+        clearInterval(timer);
+        showResult('error', '❌ Network error. Is the Flask server running?');
+      }
+
+      convertBtn.disabled = false;
+      const isCompress = selectedAction.type === 'compress';
+      btnText.innerHTML = isCompress
+        ? `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7"/></svg> Compress Now`
+        : `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> Convert Now`;
+    });
+
+    /* ── Result panel ─────────────────────────────────────────────────── */
+    function showResult(type, urlOrMsg, filename) {
+      resultPanel.classList.remove('hidden');
+      if (type === 'success') {
+        const isZip = filename && filename.endsWith('.zip');
+        resultPanel.className = 'mt-6 p-5 rounded-2xl border animate-slide-up bg-green-500/10 border-green-500/30';
+        resultPanel.innerHTML = `
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+            <div class="flex-1">
+              <p class="text-green-300 font-semibold mb-1">✅ ${type === 'success' && filename ? 'Done!' : 'Successful!'}</p>
+              ${isZip ? '<p class="text-slate-400 text-xs mb-3">Multi-page result packed as ZIP archive.</p>' : ''}
+              <p class="text-slate-400 text-sm mb-4">Your file is ready. It will be auto-deleted in ~2 minutes.</p>
+              <a href="${urlOrMsg}" download="${filename}"
+                 class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 text-white font-semibold text-sm transition-all hover:shadow-lg hover:shadow-green-500/30">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                Download ${filename}
+              </a>
+            </div>
+          </div>`;
+      } else {
+        resultPanel.className = 'mt-6 p-5 rounded-2xl border animate-slide-up bg-red-500/10 border-red-500/30';
+        resultPanel.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            <div>
+              <p class="text-red-300 font-semibold">Error</p>
+              <p class="text-slate-400 text-sm">${urlOrMsg}</p>
+            </div>
+          </div>`;
+      }
+    }
+  </script>
+</body>
+</html>
