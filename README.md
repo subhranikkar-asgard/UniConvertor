@@ -1,18 +1,42 @@
 # UniConvertor 🚀
 
-A **free, universal file converter and compressor** — convert and compress images, PDFs, and Word documents right from your browser. No sign-up. No watermarks. No limits.
+A **free, universal file converter, compressor, and PDF editor** — all running locally in your browser. No sign-up. No watermarks. No cloud uploads.
 
 ---
 
 ## ✨ Features
 
+### 🔄 File Converter & Compressor
 - 🖼️ **Image conversion** — PNG ↔ JPG ↔ WebP ↔ BMP ↔ GIF ↔ TIFF ↔ ICO ↔ PDF
 - 📄 **PDF tools** — Compress · Convert to Word (DOCX) · Convert to Images (ZIP)
 - 📝 **Word tools** — Convert to PDF · Convert to Images (ZIP)
 - 🗜️ **3 compression levels** — Maximum · Recommended · Minimum
-- 🔒 **Privacy first** — files auto-deleted after 2 minutes
-- ⚡ **Fast** — server-side processing, even large multi-page PDFs done in seconds
-- 💸 **100% Free** — no accounts, no paywalls, forever
+
+### 📄 PDF Editing Suite (18 tools)
+
+**Edit & Sign**
+- 🔤 **Add Text** — click anywhere on the page to place and style text
+- 🖼️ **Add Image** — embed any image, drag to position and resize
+- ✍️ **Sign PDF** — draw, type, or upload a signature and place it on the PDF
+- 💧 **Watermark** — add diagonal text watermarks with custom opacity and color
+- 🔢 **Page Numbers** — add page numbers at any of 6 positions
+
+**Organize Pages**
+- 🔗 **Merge PDFs** — drag-to-reorder file list, then combine
+- ✂️ **Split PDF** — split by page ranges (e.g. `1-3, 5, 7-9`)
+- 🗑️ **Delete Pages** — visual thumbnail grid, click to select and remove
+- 📤 **Extract Pages** — save only the pages you need
+- 🔄 **Rotate Pages** — rotate individual pages or all at once
+- 🔀 **Reorder Pages** — drag-and-drop thumbnails to rearrange
+- ✂️ **Crop PDF** — trim margins in PDF points
+
+**Security**
+- 🔐 **Protect PDF** — AES-256 password encryption
+- 🔓 **Unlock PDF** — remove password with known credentials
+- 📋 **Flatten PDF** — make form fields non-editable, print-ready
+
+**Convert & Extract**
+- 📝 **Extract Text** — export all PDF text to a `.txt` file
 
 ---
 
@@ -23,7 +47,7 @@ A **free, universal file converter and compressor** — convert and compress ima
 | Backend | Python · Flask |
 | Frontend | HTML · Tailwind CSS · Vanilla JS |
 | Image processing | Pillow |
-| PDF processing | PyMuPDF (fitz) |
+| PDF processing | PyMuPDF (fitz) — handles all 18 PDF tools |
 | PDF → Word | pdf2docx |
 | Word → PDF | docx2pdf |
 
@@ -40,11 +64,6 @@ cd UniConvertor
 ### 2. Install dependencies
 ```bash
 pip install -r requirements.txt
-```
-
-Or manually:
-```bash
-pip install flask pillow pymupdf pdf2docx docx2pdf werkzeug
 ```
 
 ### 3. Run the server
@@ -70,10 +89,10 @@ Open **http://localhost:5000** in your browser — that's it!
 
 ```
 UniConvertor/
-├── app.py              # Flask backend & all processing logic
+├── app.py              # Flask backend — converter + 18 PDF tool routes
 ├── requirements.txt    # Python dependencies
 ├── static/
-│   ├── index.html      # Frontend UI (Tailwind CSS + Vanilla JS)
+│   ├── index.html      # SPA frontend — converter + PDF tools hub
 │   └── assets/
 │       └── hero_bg.png # Hero section background
 ├── uploads/            # Temp upload folder (auto-created, git-ignored)
@@ -82,11 +101,12 @@ UniConvertor/
 
 ---
 
-## 🔐 Security
+## 🔐 Security & Privacy
 
+- All files processed **100% locally** — nothing sent to any cloud
 - `werkzeug.secure_filename` sanitises all uploaded filenames
 - Files stored with a UUID prefix to prevent collisions
-- Auto-cleanup thread deletes files older than **2 minutes**
+- Auto-cleanup thread deletes files after **2 minutes**
 - 100 MB max upload size enforced on both frontend and backend
 
 ---
